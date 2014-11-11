@@ -87,4 +87,6 @@
 #define SO_SET_DNS_UID 56
 /* END_OF_KNOX_NPA */
 
+#define SO_INCOMING_CPU		49
+
 #endif /* __ASM_GENERIC_SOCKET_H */
