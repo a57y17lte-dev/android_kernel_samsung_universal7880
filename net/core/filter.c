@@ -1185,6 +1185,17 @@ static struct bpf_prog_type_list sock_filter_type __read_mostly = {
 static int __init register_sock_filter_ops(void)
 {
 	bpf_register_prog_type(&sock_filter_type);
+
+static struct bpf_prog_type_list sched_cls_type __read_mostly = {
+	.ops = &sk_filter_ops,
+	.type = BPF_PROG_TYPE_SCHED_CLS,
+};
+
+static int __init register_sk_filter_ops(void)
+{
+	bpf_register_prog_type(&sk_filter_type);
+	bpf_register_prog_type(&sched_cls_type);
+
 	return 0;
 }
 late_initcall(register_sock_filter_ops);
