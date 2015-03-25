@@ -119,6 +119,7 @@ enum bpf_prog_type {
 	BPF_PROG_TYPE_UNSPEC,
 	BPF_PROG_TYPE_SOCKET_FILTER,
 	BPF_PROG_TYPE_SCHED_CLS,
+	BPF_PROG_TYPE_KPROBE,
 };
 
 #define BPF_PSEUDO_MAP_FD	1
@@ -154,6 +155,7 @@ union bpf_attr {
 		__u32		log_level;	/* verbosity level of verifier */
 		__u32		log_size;	/* size of user buffer */
 		__aligned_u64	log_buf;	/* user supplied buffer */
+		__u32		kern_version;	/* checked when prog_type=kprobe */
 	};
 } __attribute__((aligned(8)));
 
@@ -167,6 +169,7 @@ enum bpf_func_id {
 	BPF_FUNC_map_delete_elem, /* int map_delete_elem(&map, &key) */
 	BPF_FUNC_get_prandom_u32, /* u32 prandom_u32(void) */
 	BPF_FUNC_get_smp_processor_id, /* u32 raw_smp_processor_id(void) */
+	BPF_FUNC_probe_read,      /* int bpf_probe_read(void *dst, int size, void *src) */
 	__BPF_FUNC_MAX_ID,
 };
 
