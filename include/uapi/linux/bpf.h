@@ -183,6 +183,7 @@ struct __sk_buff {
 	__u32 pkt_type;
 	__u32 mark;
 	__u32 queue_mapping;
+	__u32 priority;
 };
 
 #endif /* _UAPI__LINUX_BPF_H__ */
