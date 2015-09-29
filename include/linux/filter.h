@@ -307,7 +307,10 @@ struct bpf_binary_header {
 
 struct bpf_prog {
 	u16			pages;		/* Number of allocated pages */
-	bool			jited;		/* Is our filter JIT'ed? */
+	kmemcheck_bitfield_begin(meta);
+	u16			jited:1,	/* Is our filter JIT'ed? */
+				gpl_compatible:1; /* Is filter GPL compatible? */
+	kmemcheck_bitfield_end(meta);
 	u32			len;		/* Number of filter blocks */
 	struct sock_fprog_kern	*orig_prog;	/* Original BPF program */
 	struct bpf_prog_aux	*aux;		/* Auxiliary fields */
