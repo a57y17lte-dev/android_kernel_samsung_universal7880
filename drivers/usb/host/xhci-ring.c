@@ -280,12 +280,12 @@ void xhci_ring_cmd_db(struct xhci_hcd *xhci)
 	readl(&xhci->dba->doorbell[0]);
 }
 
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 static bool xhci_mod_cmd_timer(struct xhci_hcd *xhci, unsigned long delay)
 {
 	return mod_delayed_work(system_wq, &xhci->cmd_timer, delay);
 }
 
+#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 static struct xhci_command *xhci_next_queued_cmd(struct xhci_hcd *xhci)
 {
 	return list_first_entry_or_null(&xhci->cmd_list, struct xhci_command,
@@ -347,6 +347,8 @@ static void xhci_handle_stopped_cmd_ring(struct xhci_hcd *xhci,
 /* Must be called with xhci->lock held, releases and aquires lock back */
 static int xhci_abort_cmd_ring(struct xhci_hcd *xhci, unsigned long flags)
 #else
+=======
+>>>>>>> b13d163190d... xhci: Use delayed_work instead of timer for command timeout
 static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
 #endif
 {
@@ -368,7 +370,7 @@ static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
 	 * but the completion event in never sent. Use the cmd timeout timer to
 	 * handle those cases. Use twice the time to cover the bit polling retry
 	 */
-	mod_timer(&xhci->cmd_timer, jiffies + (2 * XHCI_CMD_DEFAULT_TIMEOUT));
+	xhci_mod_cmd_timer(xhci, 2 * XHCI_CMD_DEFAULT_TIMEOUT);
 #endif
 	xhci_write_64(xhci, temp_64 | CMD_RING_ABORT,
 			&xhci->op_regs->cmd_ring);
@@ -421,7 +423,7 @@ static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
 		xhci_err(xhci, "Stopped the command ring failed, "
 				"maybe the host is dead\n");
 		xhci->xhc_state |= XHCI_STATE_DYING;
-		del_timer(&xhci->cmd_timer);
+		cancel_delayed_work(&xhci->cmd_timer);
 		xhci_quiesce(xhci);
 		xhci_halt(xhci);
 		return -ESHUTDOWN;
@@ -1347,29 +1349,22 @@ static void xhci_handle_stopped_cmd_ring(struct xhci_hcd *xhci,
 	if ((xhci->cmd_ring->dequeue != xhci->cmd_ring->enqueue) &&
 	    !(xhci->xhc_state & XHCI_STATE_DYING)) {
 		xhci->current_cmd = cur_cmd;
-		mod_timer(&xhci->cmd_timer, jiffies + XHCI_CMD_DEFAULT_TIMEOUT);
+		xhci_mod_cmd_timer(xhci, XHCI_CMD_DEFAULT_TIMEOUT);
 		xhci_ring_cmd_db(xhci);
 	}
 	return;
 }
 #endif
 
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 void xhci_handle_command_timeout(struct work_struct *work)
-#else
-void xhci_handle_command_timeout(unsigned long data)
-#endif
 {
 	struct xhci_hcd *xhci;
 	int ret;
 	unsigned long flags;
 	u64 hw_ring_state;
 	bool second_timeout = false;
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
+
 	xhci = container_of(to_delayed_work(work), struct xhci_hcd, cmd_timer);
-#else
-	xhci = (struct xhci_hcd *) data;
-#endif
 
 	spin_lock_irqsave(&xhci->lock, flags);
 
@@ -1377,7 +1372,7 @@ void xhci_handle_command_timeout(unsigned long data)
 	 * If timeout work is pending, or current_cmd is NULL, it means we
 	 * raced with command completion. Command is handled so just return.
 	 */
-	if (!xhci->current_cmd || timer_pending(&xhci->cmd_timer)) {
+	if (!xhci->current_cmd || delayed_work_pending(&xhci->cmd_timer)) {
 		spin_unlock_irqrestore(&xhci->lock, flags);
 		return;
 	}
@@ -1480,11 +1475,7 @@ static void handle_cmd_completion(struct xhci_hcd *xhci,
 
 	cmd = list_entry(xhci->cmd_list.next, struct xhci_command, cmd_list);
 
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 	cancel_delayed_work(&xhci->cmd_timer);
-#else
-	del_timer(&xhci->cmd_timer);
-#endif
 
 	trace_xhci_cmd_completion(cmd_trb, (struct xhci_generic_trb *) event);
 
@@ -1581,9 +1572,6 @@ static void handle_cmd_completion(struct xhci_hcd *xhci,
 					       struct xhci_command, cmd_list);
 #if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 		xhci_mod_cmd_timer(xhci, XHCI_CMD_DEFAULT_TIMEOUT);
-#else
-		mod_timer(&xhci->cmd_timer, jiffies + XHCI_CMD_DEFAULT_TIMEOUT);
-#endif
 	} else if (xhci->current_cmd == cmd) {
 		xhci->current_cmd = NULL;
 	}
@@ -4195,17 +4183,9 @@ static int queue_command(struct xhci_hcd *xhci, struct xhci_command *cmd,
 
 	/* if there are no other commands queued we start the timeout timer */
 	if (xhci->cmd_list.next == &cmd->cmd_list &&
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 	    !delayed_work_pending(&xhci->cmd_timer)) {
-#else
-	    !timer_pending(&xhci->cmd_timer)) {
-#endif
 		xhci->current_cmd = cmd;
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 		xhci_mod_cmd_timer(xhci, XHCI_CMD_DEFAULT_TIMEOUT);
-#else
-		mod_timer(&xhci->cmd_timer, jiffies + XHCI_CMD_DEFAULT_TIMEOUT);
-#endif
 	}
 
 	queue_trb(xhci, xhci->cmd_ring, false, field1, field2, field3,
