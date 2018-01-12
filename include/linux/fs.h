@@ -2892,6 +2892,8 @@ static inline bool dir_relax(struct inode *inode)
 	return !IS_DEADDIR(inode);
 }
 
+extern void inode_nohighmem(struct inode *inode);
+
 /* for Android O */
 #define AID_USE_SEC_RESERVED	KGIDT_INIT(4444)
 #if ANDROID_VERSION < 90000
