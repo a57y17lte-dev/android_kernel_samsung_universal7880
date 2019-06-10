@@ -448,11 +448,7 @@ use_default_name:
 				   &rdev->rfkill_ops, rdev);
 
 	if (!rdev->rfkill) {
-#if 1 /* 20151217 Temporal patch for page allocation fail when wifi on */
-		vfree(rdev);
-#else
-		kfree(rdev);
-#endif
+ 		wiphy_free(&rdev->wiphy);
 		return NULL;
 	}
 
