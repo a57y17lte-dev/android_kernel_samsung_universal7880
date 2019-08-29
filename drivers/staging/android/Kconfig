@@ -159,7 +159,6 @@ config ANDROID_VSOC
 
 source "drivers/staging/android/ion/Kconfig"
 
-
 endif # if ANDROID
 
 endmenu
