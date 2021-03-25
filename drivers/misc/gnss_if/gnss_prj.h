@@ -52,8 +52,13 @@ enum sensor_power {
 /* #define USE_IOREMAP_NOPMU */
 #define USE_SIMPLE_WAKE_LOCK
 
-#define PMU_ADDR_7870		(0x10480000)
-#define PMU_SIZE_7870		(SZ_64K)
+#if defined(CONFIG_SOC_EXYNOS7870)
+#define PMU_ADDR		(0x10480000)
+#define PMU_SIZE		(SZ_64K)
+#elif defined(CONFIG_SOC_EXYNOS7880)
+#define PMU_ADDR		(0x106B0000)
+#define PMU_SIZE		(SZ_64K)
+#endif
 
 struct kepler_bcmd_args {
 	u16 flags;

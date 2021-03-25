@@ -357,18 +357,26 @@ static int dma_trigger(struct snd_pcm_substream *substream, int cmd)
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		prtd->state |= ST_RUNNING;
-		lpass_dma_enable(true);
 		prtd->params->ops->trigger(prtd->params->ch);
-		if (prtd->dram_used)
-			atomic_inc(&dram_usage_cnt);
+		if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ||
+			(prtd->dram_used)) {
+			inc_dram_usage_count();
+			lpass_update_lpclock(LPCLK_CTRLID_LEGACY, false);
+		} else {
+			lpass_update_lpclock(LPCLK_CTRLID_RECORD, true);
+		}
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
 		prtd->state &= ~ST_RUNNING;
 		prtd->params->ops->stop(prtd->params->ch);
-		lpass_dma_enable(false);
-		if (prtd->dram_used)
-			atomic_dec(&dram_usage_cnt);
+		if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ||
+			(prtd->dram_used)) {
+			dec_dram_usage_count();
+			lpass_update_lpclock(LPCLK_CTRLID_LEGACY, false);
+		} else {
+			lpass_update_lpclock(LPCLK_CTRLID_RECORD, false);
+		}
 		break;
 
 	default:

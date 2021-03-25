@@ -501,23 +501,29 @@ out:
 
 static void eax_adma_trigger(bool on)
 {
-	int ret;
+	unsigned long flags;
 
-	spin_lock(&di.lock);
+	spin_lock_irqsave(&di.lock, flags);
 
 	if (on) {
 		di.running = on;
 		lpass_dma_enable(true);
-		di.params->ops->trigger(di.params->ch);
+		inc_dram_usage_count();
+		/* eax always uses dram */
+		lpass_update_lpclock(LPCLK_CTRLID_LEGACY, true);
+		if (di.params->ch)
+			di.params->ops->trigger(di.params->ch);
 	} else {
-		ret = di.params->ops->stop(di.params->ch);
+		if (di.params->ch)
+			di.params->ops->stop(di.params->ch);
 		lpass_dma_enable(false);
+		dec_dram_usage_count();
 		di.prepare_done = false;
 		di.running = on;
-		pr_info("%s:DMA stop retrun value:%d\n", __func__, ret);
+		lpass_update_lpclock(LPCLK_CTRLID_LEGACY, false);
 	}
 
-	spin_unlock(&di.lock);
+	spin_unlock_irqrestore(&di.lock, flags);
 }
 
 static inline void eax_dma_xfer(struct runtime_data *prtd,

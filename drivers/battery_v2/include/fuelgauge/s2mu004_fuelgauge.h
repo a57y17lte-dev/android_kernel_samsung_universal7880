@@ -14,7 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #ifndef __S2MU004_FUELGAUGE_H
@@ -25,8 +26,6 @@
 #endif
 
 #include "../sec_charging_common.h"
-
-extern unsigned int lpcharge;
 
 /* Slave address should be shifted to the right 1bit.
  * R/W bit should NOT be included.
@@ -93,26 +92,19 @@ struct sec_fg_info {
 
 #if defined(CONFIG_BATTERY_AGE_FORECAST)
 struct fg_age_data_info {
-        int battery_table3[88]; // evt2
-        int battery_table4[22]; // evt2
-        int batcap[4];
-        int accum[2];
+	int battery_table3[88]; // evt2
+	int battery_table4[22]; // evt2
+	int batcap[4];
+	int accum[2];
 	int soc_arr_val[22];
-        int ocv_arr_val[22];
+	int ocv_arr_val[22];
+#if defined(CONFIG_S2MU004_MODE_CHANGE_BY_TOPOFF)
+	int volt_mode_tunning;
+#endif
 };
 
 #define	fg_age_data_info_t \
 	struct fg_age_data_info
-#endif
-
-#if defined(CONFIG_FUELGAUGE_ASOC_FROM_CYCLES)
-struct sec_cycles_to_asoc {
-	unsigned int cycle;
-	unsigned int asoc;
-};
-
-#define sec_cycles_to_asoc_t \
-	struct sec_cycles_to_asoc
 #endif
 
 typedef struct s2mu004_fuelgauge_platform_data {
@@ -130,32 +122,28 @@ typedef struct s2mu004_fuelgauge_platform_data {
 	char *fuelgauge_name;
 
 	bool repeated_fuelalert;
-
-#if defined(CONFIG_FUELGAUGE_ASOC_FROM_CYCLES)
-	int fixed_asoc_levels;
-	sec_cycles_to_asoc_t *cycles_to_asoc;
-#endif
 } s2mu004_fuelgauge_platform_data_t;
 
 struct s2mu004_fuelgauge_data {
-        struct device           *dev;
-        struct i2c_client       *i2c;
-        struct i2c_client       *pmic;
-        struct mutex            fuelgauge_mutex;
-        s2mu004_fuelgauge_platform_data_t *pdata;
-        struct power_supply     psy_fg;
-        /* struct delayed_work isr_work; */
+	struct device           *dev;
+	struct i2c_client       *i2c;
+	struct i2c_client       *pmic;
+	struct mutex            fuelgauge_mutex;
+	s2mu004_fuelgauge_platform_data_t *pdata;
+	struct power_supply	psy_fg;
+	/* struct delayed_work isr_work; */
 
-        int cable_type;
-        bool is_charging;
-        int mode;
-        int revision;
+	int cable_type;
+	bool is_charging;
+	int mode;
+	int revision;
+	int topoff_current;
 
-        /* HW-dedicated fuel guage info structure
-         * used in individual fuel gauge file only
-         * (ex. dummy_fuelgauge.c)
-         */
-        struct sec_fg_info      info;
+	/* HW-dedicated fuel guage info structure
+	 * used in individual fuel gauge file only
+	 * (ex. dummy_fuelgauge.c)
+	 */
+	struct sec_fg_info      info;
 #if defined(CONFIG_BATTERY_AGE_FORECAST)
 	fg_age_data_info_t*	age_data_info;
 	int fg_num_age_step;
@@ -169,6 +157,7 @@ struct s2mu004_fuelgauge_data {
         unsigned int capacity_old;      /* only for atomic calculation */
         unsigned int capacity_max;      /* only for dynamic calculation */
         unsigned int standard_capacity;
+		int raw_capacity;
 
         bool initial_update_of_soc;
 	bool sleep_initial_update_of_soc;

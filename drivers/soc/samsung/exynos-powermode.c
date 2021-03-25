@@ -664,7 +664,9 @@ void exynos_prepare_sys_powerdown(enum sys_powerdown mode)
 	/*
 	 * exynos_prepare_sys_powerdown() is called by only cpu0.
 	 */
+#if !defined(CONFIG_SOC_EXYNOS7880)
 	unsigned int cpu = 0;
+#endif
 
 	exynos_set_idle_ip_mask(mode);
 	exynos_set_wakeupmask(mode);
@@ -675,10 +677,12 @@ void exynos_prepare_sys_powerdown(enum sys_powerdown mode)
 	case SYS_SICD:
 		exynos_pm_sicd_enter();
 		break;
+#if !defined(CONFIG_SOC_EXYNOS7880)		
 	case SYS_AFTR:
 		exynos_cpu.power_down(cpu);
 		exynos_cpu.power_down(cpu);
 		break;
+#endif
 	default:
 		break;
 	}
@@ -689,7 +693,9 @@ void exynos_wakeup_sys_powerdown(enum sys_powerdown mode, bool early_wakeup)
 	/*
 	 * exynos_wakeup_sys_powerdown() is called by only cpu0.
 	 */
+#if !defined(CONFIG_SOC_EXYNOS7880)	 
 	unsigned int cpu = 0;
+#endif	
 
 	if (early_wakeup)
 		cal_pm_earlywakeup(mode);
@@ -700,10 +706,12 @@ void exynos_wakeup_sys_powerdown(enum sys_powerdown mode, bool early_wakeup)
 	case SYS_SICD:
 		exynos_pm_sicd_exit();
 		break;
+#if !defined(CONFIG_SOC_EXYNOS7880)		
 	case SYS_AFTR:
 		if (early_wakeup)
 			exynos_cpu.power_up(cpu);
 		break;
+#endif		
 	default:
 		break;
 	}

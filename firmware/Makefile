@@ -106,7 +106,9 @@ fw-shipped-$(CONFIG_USB_KAWETH) += kaweth/new_code.bin kaweth/trigger_code.bin \
 				   kaweth/trigger_code_fix.bin
 ifdef CONFIG_FIRMWARE_IN_KERNEL
 fw-shipped-$(CONFIG_EXYNOS8890_APM) += apm_8890_v6.h
+ifndef CONFIG_SOC_EXYNOS7880
 fw-shipped-$(CONFIG_GNSS_SHMEM_IF) += gnss_firmware.bin
+endif
 fw-shipped-$(CONFIG_USB_SERIAL_KEYSPAN_MPR) += keyspan/mpr.fw
 fw-shipped-$(CONFIG_USB_SERIAL_KEYSPAN_USA18X) += keyspan/usa18x.fw
 fw-shipped-$(CONFIG_USB_SERIAL_KEYSPAN_USA19) += keyspan/usa19.fw
@@ -140,8 +142,9 @@ fw-shipped-$(CONFIG_YAM) += yam/1200.bin yam/9600.bin
 
 fw-shipped-$(CONFIG_EPEN_WACOM_W9019_GTANOTE) += epen/w9019_gtaxlnote.bin epen/w9019_gtaxlnote_rev00.bin 
 fw-shipped-$(CONFIG_EPEN_WACOM_W9019) += epen/w9019_gtactive2.bin
-
+ifdef CONFIG_SOC_EXYNOS7870
 fw-shipped-$(CONFIG_TOUCHSCREEN_MELFAS_MMS449) += tsp_melfas/mms449_s5neo.fw
+endif
 fw-shipped-$(CONFIG_TOUCHSCREEN_MELFAS_MMS438) += tsp_melfas/mms438_j7x.fw tsp_melfas/mms438_j7x_hd.fw tsp_melfas/mms438_a3xpre_init.fw tsp_melfas/mms438_a3xpre.fw \
 													tsp_melfas/mms438_j7y17.fw tsp_melfas/mms438_j7ve.fw
 
@@ -158,10 +161,20 @@ $(warning '$(TSPFIRMWARE_DIRECTORY)' directory dose not exist)
 endif
 TSPFIRMWARE_DIRECTORY = firmware/tsp_zinitix
 ifeq ($(shell test -d $(TSPFIRMWARE_DIRECTORY) && echo yes),yes)
+ifdef CONFIG_SOC_EXYNOS7870
 fw-shipped-$(CONFIG_TOUCHSCREEN_ZINITIX_ZT75XX) += tsp_zinitix/zt7548_degas2.fw tsp_zinitix/zt7538_o7.fw
 fw-shipped-$(CONFIG_TOUCHSCREEN_ZINITIX_ZT75XX_TCLM) += tsp_zinitix/zt7548_a6lte.fw tsp_zinitix/zt7548_j6.fw
+endif
 else
 $(warning '$(TSPFIRMWARE_DIRECTORY)' directory dose not exist)
+endif
+ifdef CONFIG_SOC_EXYNOS7880
+fw-shipped-$(CONFIG_TOUCHSCREEN_MELFAS_MMS449) += tsp_melfas/mms449_s5neo.fw tsp_melfas/mms449_a7y17.fw
+fw-shipped-$(CONFIG_TOUCHSCREEN_ZINITIX_ZT75XX) += tsp_zinitix/zt7538_a5y17.fw
+fw-shipped-$(CONFIG_KEYBOARD_ABOV_TOUCH_T316) += abov/a96t316_a5y17.fw abov/a96t316_a7y17.fw
+fw-shipped-$(CONFIG_TOUCHSCREEN_FTS) += tsp_stm/stm_v5583.fw
+fw-shipped-$(CONFIG_KEYBOARD_CYPRESS_TOUCH_MBR31X5) += cypress/cypress_zerof.fw \
+							cypress/cypress_vlte.fw cypress/cypress_noble.fw
 endif
 fw-shipped-$(CONFIG_TOUCHSCREEN_ZINITIX_BT541C) += tsp_zinitix/bt541c_GPPIris.fw
 

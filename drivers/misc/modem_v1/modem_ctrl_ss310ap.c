@@ -535,7 +535,7 @@ int ss310ap_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 	}
 #endif
 
-#ifdef CONFIG_SOC_EXYNOS7870
+#if defined(CONFIG_SOC_EXYNOS7870) || defined(CONFIG_SOC_EXYNOS7880)
 	mc->sysram_alive = shm_request_region(shm_get_sysram_base(),
 					shm_get_sysram_size());
 	if (!mc->sysram_alive)

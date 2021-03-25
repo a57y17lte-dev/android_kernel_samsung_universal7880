@@ -61,6 +61,8 @@
 #include "fimc-is-vendor-config_m10lte.h"
 #elif defined(CONFIG_CAMERA_A2CORELTE)
 #include "fimc-is-vendor-config_a2corelte.h"
+#elif defined(CONFIG_CAMERA_A5Y17) || defined(CONFIG_CAMERA_A7Y17)
+#include "fimc-is-vendor-config_a5a7y17.h"
 #else
 #include "fimc-is-vendor-config_joshua.h"
 #endif

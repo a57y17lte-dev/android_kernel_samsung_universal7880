@@ -53,6 +53,10 @@ config EXYNOS_HOTPLUG_GOVERNOR
 	bool "Enable Exynos dynamic hotplug governor"
 	select SCHED_AVG_NR_RUNNING
 
+config EXYNOS_PM_DVS
+	bool "Enable Exynos dynamic voltage setting"
+	default n
+
 config EXYNOS_MCINFO
 	bool "Exynos memory controller information"
 	default n

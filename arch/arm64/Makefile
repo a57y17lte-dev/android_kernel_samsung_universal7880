@@ -47,6 +47,8 @@ ifeq ($(CONFIG_ARM64_RANDOMIZE_TEXT_OFFSET), y)
 TEXT_OFFSET := $(shell awk 'BEGIN {srand(); printf "0x%03x000\n", int(512 * rand())}')
 else
 TEXT_OFFSET := 0x00080000
+textofs-$(CONFIG_TEXT_OFFSET_OVERRIDE)	:= $(CONFIG_TEXT_OFFSET)
+TEXT_OFFSET := $(textofs-y)
 endif
 
 export	TEXT_OFFSET GZFLAGS

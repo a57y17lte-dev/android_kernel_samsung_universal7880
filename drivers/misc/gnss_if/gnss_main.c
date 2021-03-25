@@ -65,7 +65,7 @@ static struct gnss_ctl *create_gnssctl_device(struct platform_device *pdev)
 	gnssctl->name = pdata->name;
 
 #ifdef USE_IOREMAP_NOPMU
-	gnssctl->pmu_reg = devm_ioremap(dev, PMU_ADDR_7870, PMU_SIZE_7870);
+	gnssctl->pmu_reg = devm_ioremap(dev, PMU_ADDR, PMU_SIZE);
 	if (gnssctl->pmu_reg == NULL) {
 		gif_err("%s: pmu ioremap failed.\n", pdata->name);
 		return NULL;

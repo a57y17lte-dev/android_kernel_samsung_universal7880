@@ -62,8 +62,13 @@ extern void sec_initcall_debug_add(initcall_t fn, unsigned long long t);
  * Param op.
  */
 #ifdef CONFIG_SEC_PARAM
+#ifdef CONFIG_SOC_EXYNOS7880
+#define CM_OFFSET				CONFIG_CM_OFFSET
+#define CM_OFFSET_LIMIT				8
+#else
 #define CM_OFFSET				0x700234
 #define CM_OFFSET_LIMIT				1
+#endif
 #define GSP_OFFSET				0x700238
 #define GSP_OFFSET_LIMIT 			0
 enum
