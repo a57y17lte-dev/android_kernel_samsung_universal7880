@@ -645,7 +645,7 @@ void __ext4_abort(struct super_block *sb, const char *function,
 		sb->s_flags |= MS_RDONLY;
 		if (EXT4_SB(sb)->s_journal)
 			jbd2_journal_abort(EXT4_SB(sb)->s_journal, -EIO);
-		save_error_info(sb, function, line);
+		save_error_info(sb, function, line);F
 	}
 	if (test_opt(sb, ERRORS_PANIC) && !ignore_fs_panic) {
 		if (EXT4_SB(sb)->s_journal &&
@@ -732,6 +732,7 @@ __acquires(bitlock)
 	}
 
 	ext4_unlock_group(sb, grp);
+	ext4_commit_super(sb, 1);	
 	ext4_handle_error(sb, page_buf);
 	if (page_buf)
 		free_page((unsigned long)page_buf);
