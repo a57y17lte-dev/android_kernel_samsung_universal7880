@@ -20,6 +20,7 @@
 
 #include "sdcardfs.h"
 #include <linux/fs_struct.h>
+#include <linux/ratelimit.h>
 
 const struct cred *override_fsids(struct sdcardfs_sb_info *sbi,
 		struct sdcardfs_inode_data *data)
@@ -219,7 +220,6 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode
 		err = -EACCES;
 		goto out_eacces;
 	}
-
 
 	/* save current_cred and override it */
 	saved_cred = override_fsids(SDCARDFS_SB(dir->i_sb),
@@ -560,12 +560,6 @@ static int sdcardfs_permission(struct vfsmount *mnt, struct inode *inode, int ma
 		return PTR_ERR(mnt);
 	if (!top)
 		return -EINVAL;
-
-	/* don't allow extended attribute */
-	if (IS_ERR(mnt)) {
-		data_put(top);
-		return PTR_ERR(mnt);
-	}
 
 	/*
 	 * Permission check on sdcardfs inode.
