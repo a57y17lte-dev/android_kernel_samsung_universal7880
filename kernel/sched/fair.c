@@ -8363,17 +8363,7 @@ static void nohz_balancer_kick(int cpu)
 {
 	int ilb_cpu;
 
-
 	nohz.next_balance++;
-
-out_balanced:
-	/*
-	 * We reach balance although we may have faced some affinity
-	 * constraints. Clear the imbalance flag only if other tasks got
-	 * a chance to move and fix the imbalance.
-	 */
-	if (sd_parent && !(env.flags & LBF_ALL_PINNED)) {
-		int *group_imbalance = &sd_parent->groups->sgc->imbalance;
 
 	ilb_cpu = find_new_ilb(cpu);
 
