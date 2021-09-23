@@ -1498,6 +1498,9 @@ struct xhci_hcd {
 #define CMD_RING_STATE_STOPPED         (1 << 2)
 	struct list_head        cmd_list;
 	unsigned int		cmd_ring_reserved_trbs;
+#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
+	struct completion	cmd_ring_stop_completion;
+#endif
 	struct delayed_work	cmd_timer;
 	struct completion	cmd_ring_stop_completion;
 	struct xhci_command	*current_cmd;
