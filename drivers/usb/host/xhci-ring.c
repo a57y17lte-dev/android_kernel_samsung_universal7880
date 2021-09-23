@@ -285,7 +285,6 @@ static bool xhci_mod_cmd_timer(struct xhci_hcd *xhci, unsigned long delay)
 	return mod_delayed_work(system_wq, &xhci->cmd_timer, delay);
 }
 
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 static struct xhci_command *xhci_next_queued_cmd(struct xhci_hcd *xhci)
 {
 	return list_first_entry_or_null(&xhci->cmd_list, struct xhci_command,
@@ -341,35 +340,17 @@ static void xhci_handle_stopped_cmd_ring(struct xhci_hcd *xhci,
 		xhci_ring_cmd_db(xhci);
 	}
 }
-#endif
 
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 /* Must be called with xhci->lock held, releases and aquires lock back */
 static int xhci_abort_cmd_ring(struct xhci_hcd *xhci, unsigned long flags)
-#else
-static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
-#endif
 {
 	u64 temp_64;
 	int ret;
 
 	xhci_dbg(xhci, "Abort command ring\n");
 
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 	reinit_completion(&xhci->cmd_ring_stop_completion);
 	temp_64 = xhci_read_64(xhci, &xhci->op_regs->cmd_ring);
-#else
-	temp_64 = xhci_read_64(xhci, &xhci->op_regs->cmd_ring);
-	xhci->cmd_ring_state = CMD_RING_STATE_ABORTED;
-	
-	/*
-	 * Writing the CMD_RING_ABORT bit should cause a cmd completion event,
-	 * however on some host hw the CMD_RING_RUNNING bit is correctly cleared
-	 * but the completion event in never sent. Use the cmd timeout timer to
-	 * handle those cases. Use twice the time to cover the bit polling retry
-	 */
-	xhci_mod_cmd_timer(xhci, 2 * XHCI_CMD_DEFAULT_TIMEOUT);
-#endif
 	xhci_write_64(xhci, temp_64 | CMD_RING_ABORT,
 			&xhci->op_regs->cmd_ring);
 
@@ -389,7 +370,6 @@ static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
 		udelay(1000);
 		ret = xhci_handshake(xhci, &xhci->op_regs->cmd_ring,
 				     CMD_RING_RUNNING, 0, 3 * 1000 * 1000);
-#if defined (CONFIG_USB_HOST_SAMSUNG_FEATURE)
 		if (ret < 0) {
 			xhci_err(xhci, "Stopped the command ring failed, "
 				 "maybe the host is dead\n");
@@ -414,18 +394,6 @@ static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
 		xhci->current_cmd = NULL;
 	} else {
 		xhci_handle_stopped_cmd_ring(xhci, xhci_next_queued_cmd(xhci));
-#else
-		if (ret == 0)
-			return 0;
-
-		xhci_err(xhci, "Stopped the command ring failed, "
-				"maybe the host is dead\n");
-		xhci->xhc_state |= XHCI_STATE_DYING;
-		cancel_delayed_work(&xhci->cmd_timer);
-		xhci_quiesce(xhci);
-		xhci_halt(xhci);
-		return -ESHUTDOWN;
-#endif
 	}
 
 	return 0;
@@ -1302,65 +1270,13 @@ void xhci_cleanup_command_queue(struct xhci_hcd *xhci)
 		xhci_complete_del_and_free_cmd(cur_cmd, COMP_CMD_ABORT);
 }
 
-#ifndef CONFIG_USB_HOST_SAMSUNG_FEATURE
-/*
- * Turn all commands on command ring with status set to "aborted" to no-op trbs.
- * If there are other commands waiting then restart the ring and kick the timer.
- * This must be called with command ring stopped and xhci->lock held.
- */
-static void xhci_handle_stopped_cmd_ring(struct xhci_hcd *xhci,
-					 struct xhci_command *cur_cmd)
-{
-	struct xhci_command *i_cmd, *tmp_cmd;
-	u32 cycle_state;
-
-	/* Turn all aborted commands in list to no-ops, then restart */
-	list_for_each_entry_safe(i_cmd, tmp_cmd, &xhci->cmd_list,
-				 cmd_list) {
-
-		if (i_cmd->status != COMP_CMD_ABORT)
-			continue;
-
-		i_cmd->status = COMP_CMD_STOP;
-
-		xhci_dbg(xhci, "Turn aborted command %p to no-op\n",
-			 i_cmd->command_trb);
-		/* get cycle state from the original cmd trb */
-		cycle_state = le32_to_cpu(
-			i_cmd->command_trb->generic.field[3]) &	TRB_CYCLE;
-		/* modify the command trb to no-op command */
-		i_cmd->command_trb->generic.field[0] = 0;
-		i_cmd->command_trb->generic.field[1] = 0;
-		i_cmd->command_trb->generic.field[2] = 0;
-		i_cmd->command_trb->generic.field[3] = cpu_to_le32(
-			TRB_TYPE(TRB_CMD_NOOP) | cycle_state);
-
-		/*
-		 * caller waiting for completion is called when command
-		 *  completion event is received for these no-op commands
-		 */
-	}
-
-	xhci->cmd_ring_state = CMD_RING_STATE_RUNNING;
-
-	/* ring command ring doorbell to restart the command ring */
-	if ((xhci->cmd_ring->dequeue != xhci->cmd_ring->enqueue) &&
-	    !(xhci->xhc_state & XHCI_STATE_DYING)) {
-		xhci->current_cmd = cur_cmd;
-		xhci_mod_cmd_timer(xhci, XHCI_CMD_DEFAULT_TIMEOUT);
-		xhci_ring_cmd_db(xhci);
-	}
-	return;
-}
-#endif
-
 void xhci_handle_command_timeout(struct work_struct *work)
 {
 	struct xhci_hcd *xhci;
 	int ret;
 	unsigned long flags;
 	u64 hw_ring_state;
-	bool second_timeout = false;
+
 	xhci = container_of(to_delayed_work(work), struct xhci_hcd, cmd_timer);
 
 	spin_lock_irqsave(&xhci->lock, flags);
@@ -1373,17 +1289,13 @@ void xhci_handle_command_timeout(struct work_struct *work)
 		spin_unlock_irqrestore(&xhci->lock, flags);
 		return;
 	}
-
 	/* mark this command to be cancelled */
-	if (xhci->current_cmd->status == COMP_CMD_ABORT)
-		second_timeout = true;
 	xhci->current_cmd->status = COMP_CMD_ABORT;
 
 	/* Make sure command ring is running before aborting it */
 	hw_ring_state = xhci_read_64(xhci, &xhci->op_regs->cmd_ring);
 	if ((xhci->cmd_ring_state & CMD_RING_STATE_RUNNING) &&
 	    (hw_ring_state & CMD_RING_RUNNING))  {
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 		/* Prevent new doorbell, and start command abort */
 		xhci->cmd_ring_state = CMD_RING_STATE_ABORTED;
 		xhci_info(xhci, "Command timeout\n");
@@ -1399,7 +1311,7 @@ void xhci_handle_command_timeout(struct work_struct *work)
 		goto time_out_completed;
 	}
 	/* host removed. Bail out */
-	if (second_timeout || xhci->xhc_state & XHCI_STATE_REMOVING) {
+	if (xhci->xhc_state & XHCI_STATE_REMOVING) {
 		xhci_info(xhci, "host removed, ring start fail?\n");
 		xhci_cleanup_command_queue(xhci);
 		goto time_out_completed;
@@ -1410,38 +1322,6 @@ void xhci_handle_command_timeout(struct work_struct *work)
 time_out_completed:
 	spin_unlock_irqrestore(&xhci->lock, flags);
 	return;
-#else
-		xhci_dbg(xhci, "Command timeout\n");
-		ret = xhci_abort_cmd_ring(xhci);
-		if (unlikely(ret == -ESHUTDOWN)) {
-			xhci_err(xhci, "Abort command ring failed\n");
-			xhci_cleanup_command_queue(xhci);
-			spin_unlock_irqrestore(&xhci->lock, flags);
-			usb_hc_died(xhci_to_hcd(xhci)->primary_hcd);
-			xhci_dbg(xhci, "xHCI host controller is dead.\n");
-
-			return;
-		}
-
-		goto time_out_completed;
-	}
-
-	/* command ring failed to restart, or host removed. Bail out */
-	if (second_timeout || xhci->xhc_state & XHCI_STATE_REMOVING) {
-		xhci_dbg(xhci, "command timed out twice, ring start fail?\n");
-		xhci_cleanup_command_queue(xhci);
-
-		goto time_out_completed;
-	}
-
-	/* command timeout on stopped ring, ring can't be aborted */
-	xhci_dbg(xhci, "Command timeout on stopped ring\n");
-	xhci_handle_stopped_cmd_ring(xhci, xhci->current_cmd);
-
-time_out_completed:
-	spin_unlock_irqrestore(&xhci->lock, flags);
-	return;
-#endif
 }
 
 static void handle_cmd_completion(struct xhci_hcd *xhci,
@@ -1480,11 +1360,7 @@ static void handle_cmd_completion(struct xhci_hcd *xhci,
 
 	/* If CMD ring stopped we own the trbs between enqueue and dequeue */
 	if (cmd_comp_code == COMP_CMD_STOP) {
-#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 		complete_all(&xhci->cmd_ring_stop_completion);
-#else
-		xhci_handle_stopped_cmd_ring(xhci, cmd);
-#endif
 		return;
 	}
 
