@@ -1502,7 +1502,6 @@ struct xhci_hcd {
 	struct completion	cmd_ring_stop_completion;
 #endif
 	struct delayed_work	cmd_timer;
-	struct completion	cmd_ring_stop_completion;
 	struct xhci_command	*current_cmd;
 	struct xhci_ring	*event_ring;
 	struct xhci_erst	erst;
