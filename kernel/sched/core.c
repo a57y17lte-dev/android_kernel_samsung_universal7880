@@ -3455,8 +3455,8 @@ static int __sched_setscheduler(struct task_struct *p,
 	struct rq *rq;
 	int reset_on_fork;
 
-	/* The pi code expects interrupts enabled */
-	BUG_ON(pi && in_interrupt());
+	/* may grab non-irq protected spin_locks */
+	BUG_ON(in_interrupt());
 recheck:
 	/* double check policy once rq lock held */
 	if (policy < 0) {
