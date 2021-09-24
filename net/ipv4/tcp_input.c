@@ -4388,12 +4388,16 @@ void tcp_ofo_queue(struct sock *sk)
 
 		/* In case of MPTCP, the segment may be empty if it's a
 		 * non-data DATA_FIN. (see beginning of tcp_data_queue)
+		 *
+		 * But this only holds true for subflows, not for the
+		 * meta-socket.
 		 */
-		if (unlikely(!after(TCP_SKB_CB(skb)->end_seq, tp->rcv_nxt))) {
 #ifdef CONFIG_MPTCP
-		&& !(mptcp(tp) && TCP_SKB_CB(skb)->end_seq == TCP_SKB_CB(skb)->seq) 
+		if (unlikely(!after(TCP_SKB_CB(skb)->end_seq, tp->rcv_nxt) &&
+			     (is_meta_sk(sk) || !mptcp(tp) || TCP_SKB_CB(skb)->end_seq != TCP_SKB_CB(skb)->seq))) {
+#else
+		if (unlikely(!after(TCP_SKB_CB(skb)->end_seq, tp->rcv_nxt))) {
 #endif
-		) {
 			SOCK_DEBUG(sk, "ofo packet was already received\n");
 			tcp_drop(sk, skb);
 			continue;
@@ -4518,7 +4522,7 @@ coalesce_done:
 			if (!after(end_seq, TCP_SKB_CB(skb1)->end_seq)
 #ifdef CONFIG_MPTCP
 				&& (is_meta_sk(sk) || !mptcp(tp) || end_seq != seq)
-#endif			
+#endif
 			) {
 				/* All the bits are present. Drop. */
 				NET_INC_STATS(sock_net(sk),
@@ -4575,7 +4579,6 @@ merge_right:
 		}
 #endif
 		rb_erase(&skb1->rbnode, &tp->out_of_order_queue);
-
 		tcp_dsack_extend(sk, TCP_SKB_CB(skb1)->seq,
 				 TCP_SKB_CB(skb1)->end_seq);
 		NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_TCPOFOMERGE);
@@ -4672,10 +4675,11 @@ static void tcp_data_queue(struct sock *sk, struct sk_buff *skb)
 	int eaten = -1;
 
 	/* If no data is present, but a data_fin is in the options, we still
-	 * have to call mptcp_queue_skb later on. */
-	if (TCP_SKB_CB(skb)->seq == TCP_SKB_CB(skb)->end_seq 
+	 * have to call mptcp_queue_skb later on.
+	 */
+	if (TCP_SKB_CB(skb)->seq == TCP_SKB_CB(skb)->end_seq
 #ifdef CONFIG_MPTCP
-		&& !(mptcp(tp) && mptcp_is_data_fin(skb))
+	&& !(mptcp(tp) && mptcp_is_data_fin(skb))
 #endif
 	   ) {
 		__kfree_skb(skb);
