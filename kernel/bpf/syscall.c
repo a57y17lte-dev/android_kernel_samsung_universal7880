@@ -496,10 +496,10 @@ static int bpf_prog_load(union bpf_attr *attr)
 		goto free_prog;
 
 	prog->orig_prog = NULL;
-	prog->jited = 0;
+	prog->jited = false;
 
 	atomic_set(&prog->aux->refcnt, 1);
-	prog->gpl_compatible = is_gpl ? 1 : 0;
+	prog->aux->is_gpl_compatible = is_gpl;
 
 	/* find program type: socket_filter vs tracing_filter */
 	err = find_prog_type(type, prog);
